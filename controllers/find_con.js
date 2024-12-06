@@ -13,6 +13,43 @@ async function findByItemIDcon(req, res) {
     });
 }
 
+async function deleteByItemIDcon(req, res) {
+
+    const itemID = req.params.itemID;
+
+    const deleteDonatedBy = `DELETE FROM DonatedBy WHERE ItemID = ?`;
+    const deletePieces = `DELETE FROM Piece WHERE ItemID = ?`;
+    const deleteItemIn = `DELETE FROM ItemIn WHERE ItemID = ?`;
+    const deleteItem = `DELETE FROM Item WHERE ItemID = ?`;
+
+    db.query(deleteDonatedBy, [itemID], (err) => {
+        if (err) {
+            console.error('Error deleting from DonatedBy:', err);
+            return res.status(500).send('Error deleting from DonatedBy');
+        }
+        db.query(deletePieces, [itemID], (err) => {
+            if (err) {
+                console.error('Error deleting from Piece:', err);
+                return res.status(500).send('Error deleting from Piece');
+            }
+            db.query(deleteItemIn, [itemID], (err) => {
+                if (err) {
+                    console.error('Error deleting from ItemIn:', err);
+                    return res.status(500).send('Error deleting from ItemIn');
+                }
+                db.query(deleteItem, [itemID], (err) => {
+                    if (err) {
+                        console.error('Error deleting from Item:', err);
+                        return res.status(500).send('Error deleting from Item');
+                    }
+                    return res.send('Item and all associated data deleted successfully');
+                });
+            });
+        });
+    });
+
+}
+
 async function findOrderItemscon(req, res) {
     const orderID = req.params.orderID;
 
@@ -69,4 +106,44 @@ async function allAvailablecon(req, res) {
     });
 }
 
-module.exports = { findByItemIDcon, findOrderItemscon, allAvailablecon }
+async function searchByCategorycon(req, res) {
+    const { mainCategory, subCategory } = req.query;
+
+    const sql = `
+        SELECT i.ItemID, i.iDescription, i.color, i.isNew, c.mainCategory, c.subCategory 
+        FROM Item i
+        INNER JOIN Category c ON i.mainCategory = c.mainCategory AND i.subCategory = c.subCategory
+        WHERE c.mainCategory = ? AND c.subCategory = ?
+    `;
+
+    db.query(sql, [mainCategory, subCategory], (err, results) => {
+
+        if (err) {
+            console.error('Error fetching items by category:', err);
+            return res.status(500).send('Error fetching items');
+        }
+        res.send(results);
+    });
+}
+
+async function findItemsatLoc(req, res) {
+    const { roomNum, shelfNum } = req.query;
+
+    const sql = `
+        SELECT i.ItemID, i.iDescription, i.color, i.isNew, l.roomNum, l.shelfNum
+        FROM Item i
+        JOIN Piece p ON i.ItemID = p.ItemID
+        JOIN Location l ON p.roomNum = l.roomNum AND p.shelfNum = l.shelfNum
+        WHERE l.roomNum = ? AND l.shelfNum = ?
+    `;
+
+    db.query(sql, [roomNum, shelfNum], (err, results) => {
+        if (err) {
+            console.error('Error fetching items by location:', err);
+            return res.status(500).send('Error fetching items');
+        }
+        res.send(results);
+    });
+}
+
+module.exports = { findByItemIDcon, findOrderItemscon, allAvailablecon, deleteByItemIDcon, searchByCategorycon, findItemsatLoc }

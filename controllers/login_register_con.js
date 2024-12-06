@@ -5,12 +5,12 @@ async function logincon(req, res) {
     const { userName, password } = req.body;
     const sql = `SELECT * FROM Person WHERE userName = ?`;
     db.query(sql, [userName], async (err, results) => {
-        if (err || results.length === 0) return res.status(400).send('Invalid credentials');
+        if (err || results.length <= 0) return res.status(401).send('No User Found');
         const isValid = await bcrypt.compare(password, results[0].password);
-        if (!isValid) return res.status(400).send('Invalid credentials');
+        if (!isValid) return res.status(401).send('Username and Password do not match');
         req.session.userName = userName;
 
-        res.send('Login successful');
+        return res.status(200).send('Login successful');
     });
 }
 async function registercon(req, res) {

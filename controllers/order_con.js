@@ -15,6 +15,7 @@ async function startOrdercon(req, res) {
             console.error('Error checking staff role:', err);
             return res.status(500).json({ message: "Server error occurred" });
         }
+        console.log(staffCheckResult)
 
         if (!staffCheckResult || staffCheckResult[0].roleID !== 'staff') {
             console.log(staffCheckResult)

@@ -95,4 +95,31 @@ async function acceptDonationcon(req, res) {
 
 }
 
-module.exports = { acceptDonationcon }
+async function getDonorInfocon(req, res) {
+    const donorID = req.params.donorID;
+
+    const donorQuery = `
+        SELECT p.fname, p.lname, p.email, pp.phone
+        FROM Person p
+        LEFT JOIN PersonPhone pp ON p.userName = pp.userName
+        WHERE p.userName = ?
+    `;
+
+    db.query(donorQuery, [donorID], (err, result) => {
+        console.log(result)
+        if (err) {
+            return res.status(500).send("Error fetching donor information");
+        }
+
+        if (result.length === 0) {
+            return res.status(404).send("No donor found with the given ID");
+        }
+
+        // Send the donor information
+        res.send(result[0]);
+    });
+};
+
+
+
+module.exports = { acceptDonationcon, getDonorInfocon }

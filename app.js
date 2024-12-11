@@ -10,7 +10,7 @@ const logreg = require('./routes/login_register_routes')
 const findroutes = require('./routes/find_routes')
 const donateroutes = require('./routes/donate_routes')
 const orderroutes = require('./routes/order_routes')
-
+const roleroute = require('./routes/role_route')
 
 const app = express();
 
@@ -43,3 +43,4 @@ app.use('/', logreg)
 app.use('/find', findroutes)
 app.use('/donate', donateroutes)
 app.use('/order', orderroutes)
+app.use('/checkrole', roleroute)

@@ -8,7 +8,7 @@ async function findByItemIDcon(req, res) {
         JOIN Location ON Piece.roomNum = Location.roomNum AND Piece.shelfNum = Location.shelfNum
         WHERE Piece.ItemID = ?`;
     db.query(sql, [itemID], (err, results) => {
-        if (err) return res.status(400).send('Error fetching item locations');
+        if (err || results.length <= 0) return res.status(400).send('No Item Found');
         res.json(results);
     });
 }
@@ -16,38 +16,64 @@ async function findByItemIDcon(req, res) {
 async function deleteByItemIDcon(req, res) {
 
     const itemID = req.params.itemID;
+    const { loggedInUser } = req.body;
 
+    const isstaff = `SELECT roleID FROM Act WHERE userName = ?`;
+    const itemexists = `SELECT ItemID FROM Item WHERE ItemID = ?`;
     const deleteDonatedBy = `DELETE FROM DonatedBy WHERE ItemID = ?`;
     const deletePieces = `DELETE FROM Piece WHERE ItemID = ?`;
     const deleteItemIn = `DELETE FROM ItemIn WHERE ItemID = ?`;
     const deleteItem = `DELETE FROM Item WHERE ItemID = ?`;
 
-    db.query(deleteDonatedBy, [itemID], (err) => {
+    db.query(isstaff, [loggedInUser], (err, staffCheckResult) => {
         if (err) {
-            console.error('Error deleting from DonatedBy:', err);
-            return res.status(500).send('Error deleting from DonatedBy');
+            console.error('Error checking staff role:', err);
+            return res.status(500).json({ message: "Server error occurred" });
         }
-        db.query(deletePieces, [itemID], (err) => {
-            if (err) {
-                console.error('Error deleting from Piece:', err);
-                return res.status(500).send('Error deleting from Piece');
+
+        console.log(staffCheckResult)
+        if (!staffCheckResult || staffCheckResult.length == 0) {
+            console.log(staffCheckResult)
+            return res.status(403).json({ message: "You must be a staff member to delete an item." });
+        }
+        else if (staffCheckResult[0].roleID !== 'staff') {
+            console.log(staffCheckResult)
+            return res.status(403).json({ message: "You must be a staff member to delete an item." });
+        }
+
+
+        db.query(itemexists, [itemID], (err, resitem) => {
+            if (err || resitem.length == 0) {
+                return res.status(400).send('No item Found in the database');
             }
-            db.query(deleteItemIn, [itemID], (err) => {
+
+            db.query(deleteDonatedBy, [itemID], (err) => {
                 if (err) {
-                    console.error('Error deleting from ItemIn:', err);
-                    return res.status(500).send('Error deleting from ItemIn');
+                    console.error('Error deleting from DonatedBy:', err);
+                    return res.status(500).send('Error deleting from DonatedBy');
                 }
-                db.query(deleteItem, [itemID], (err) => {
+                db.query(deletePieces, [itemID], (err) => {
                     if (err) {
-                        console.error('Error deleting from Item:', err);
-                        return res.status(500).send('Error deleting from Item');
+                        console.error('Error deleting from Piece:', err);
+                        return res.status(500).send('Error deleting from Piece');
                     }
-                    return res.send('Item and all associated data deleted successfully');
+                    db.query(deleteItemIn, [itemID], (err) => {
+                        if (err) {
+                            console.error('Error deleting from ItemIn:', err);
+                            return res.status(500).send('Error deleting from ItemIn');
+                        }
+                        db.query(deleteItem, [itemID], (err) => {
+                            if (err) {
+                                console.error('Error deleting from Item:', err);
+                                return res.status(500).send('Error deleting from Item');
+                            }
+                            return res.status(200).send('Item and all associated data deleted successfully');
+                        });
+                    });
                 });
             });
         });
     });
-
 }
 
 async function findOrderItemscon(req, res) {
@@ -118,9 +144,9 @@ async function searchByCategorycon(req, res) {
 
     db.query(sql, [mainCategory, subCategory], (err, results) => {
 
-        if (err) {
+        if (err || results.length <= 0) {
             console.error('Error fetching items by category:', err);
-            return res.status(500).send('Error fetching items');
+            return res.status(500).send('No Items for this category');
         }
         res.send(results);
     });
@@ -138,9 +164,8 @@ async function findItemsatLoc(req, res) {
     `;
 
     db.query(sql, [roomNum, shelfNum], (err, results) => {
-        if (err) {
-            console.error('Error fetching items by location:', err);
-            return res.status(500).send('Error fetching items');
+        if (err || results.length <= 0) {
+            return res.status(500).send('No items at given location');
         }
         res.send(results);
     });
